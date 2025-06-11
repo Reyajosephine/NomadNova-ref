@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import NotificationSystem from './NotificationSystem';
 import GroupChat from './GroupChat';
 import MemberProfiles from './MemberProfiles';
-import { FiArrowLeft, FiArrowRight, FiCheck, FiX, FiMessageSquare, FiStar, FiEye, FiPlus, FiUser, FiCalendar, FiMapPin, FiDollarSign, FiUsers, FiTruck, FiEdit2, FiHeart, FiChevronLeft, FiChevronRight, FiMail, FiMenu, FiBell, FiLogOut } from 'react-icons/fi';
+import { FiArrowLeft, FiArrowRight, FiCheck, FiX, FiMessageSquare, FiStar, FiEye, FiPlus, FiUser, FiCalendar, FiMapPin, FiDollarSign, FiUsers, FiTruck, FiEdit2, FiHeart, FiChevronLeft, FiChevronRight, FiMail, FiMenu, FiBell, FiLogOut, FiCamera, FiSearch } from 'react-icons/fi';
 
 // Mock data for trips with enhanced structure
 const mockTrips = [
@@ -164,8 +164,7 @@ const popularDestinations = [
   { id: 4, name: "London, UK", country: "UK", visits: "1.2k", image: "/assets/images/london.jpeg" }
 ];
 
-function Profile({ user, onClose, onMessage, onPhotoClick }) {
-  return (
+function Profile({ user, onClose, onMessage, onPhotoClick }) {  return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl p-8 max-w-4xl w-full border border-[#d1c7b7] shadow-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
@@ -264,7 +263,7 @@ function Profile({ user, onClose, onMessage, onPhotoClick }) {
             </div>
 
             <div className="bg-[#f8f4e3] p-4 rounded-xl border border-[#d1c7b7]">
-              <h4 className="font-bold text-[#2c5e4a] mb-3">Completed Trips</h4>
+              <h4 className="font-bold text-[#2c5e4a] mb-3">The road so far</h4>
               <div className="grid grid-cols-2 gap-4">
                 {completedTrips.map(trip => (
                   <div key={trip.id} className="relative rounded-lg overflow-hidden h-32">
@@ -288,7 +287,7 @@ function Profile({ user, onClose, onMessage, onPhotoClick }) {
   );
 }
 
-export default function Dashboard({ onLogout }) {
+function Dashboard({ onLogout }) {
   const navigate = useNavigate();
   const [currentTripIndex, setCurrentTripIndex] = useState(0);
   const [currentCompletedIndex, setCurrentCompletedIndex] = useState(0);
@@ -311,13 +310,35 @@ export default function Dashboard({ onLogout }) {
     toDate: '',
     transport: '',
     budget: '',
-    description: ''
+    currency: 'USD',
+    description: '',
+    category: '',
+    coverImage: null,
+    genderPreference: 'anyone'
+    // Removed priorities array
   });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showMemberProfile, setShowMemberProfile] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
   const [showMemberProfiles, setShowMemberProfiles] = useState(false);
   const [selectedTripForMembers, setSelectedTripForMembers] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Add a function to handle image upload
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // In a real app, you would upload this to a server
+      // For now, we'll just store the file and create a preview URL
+      const imageUrl = URL.createObjectURL(file);
+      setNewTrip(prev => ({
+        ...prev,
+        coverImage: imageUrl
+      }));
+    }
+  };
+
+  // Removed handlePriorityChange function
 
   // Current user data
   const currentUser = {
@@ -341,23 +362,16 @@ export default function Dashboard({ onLogout }) {
 
   // Fix scrolling issues by removing auto-rotate on scroll
   useEffect(() => {
-    let interval;
-    
+    // Remove auto-rotation completely
     const handleScroll = () => {
-      // Clear interval when user scrolls
-      clearInterval(interval);
+      // No action needed, just keeping the handler for future use
     };
 
-    // Only auto-rotate when not scrolling
-    interval = setInterval(() => {
-      setCurrentTripIndex((prev) => (prev + 1) % mockTrips.length);
-      setCurrentCompletedIndex((prev) => (prev + 1) % completedTrips.length);
-    }, 5000);
-
+    // No interval needed as we're removing auto-rotation
+    
     window.addEventListener('scroll', handleScroll);
     
     return () => {
-      clearInterval(interval);
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
@@ -377,39 +391,79 @@ export default function Dashboard({ onLogout }) {
     }));
   };
 
-  const handlePostTrip = () => {
-    if (!newTrip.destination || !newTrip.departure || !newTrip.fromDate ||
-        !newTrip.toDate || !newTrip.budget || !newTrip.maxPeople) {
-      alert('Please fill in all required fields');
-      return;
-    }
-
-    const fromDate = new Date(newTrip.fromDate);
-    const toDate = new Date(newTrip.toDate);
-    const durationDays = Math.ceil((toDate - fromDate) / (1000 * 60 * 60 * 24));
-
-    const tripToAdd = {
-      id: availableTrips.length + 1,
-      title: `${newTrip.destination} Adventure`,
+  const handlePostTrip = (e) => {
+    e.preventDefault();
+    
+    // Basic validation - log values to help debug
+    console.log("Form data:", newTrip);
+    
+    // Check each required field individually to identify the missing one
+    const requiredFields = {
       destination: newTrip.destination,
       departure: newTrip.departure,
-      duration: `${durationDays} days`,
-      price: newTrip.budget,
-      image: "/assets/images/default.jpeg",
-      spots: newTrip.maxPeople - newTrip.numberOfPeople,
-      maxSpots: newTrip.maxPeople,
-      date: `${formatDate(fromDate)} - ${formatDate(toDate)}`,
-      organizer: currentUser.name,
-      organizerId: currentUser.id,
-      organizerAvatar: currentUser.avatar,
-      tags: ["Adventure", "Travel"],
+      fromDate: newTrip.fromDate,
+      toDate: newTrip.toDate,
       transport: newTrip.transport,
-      description: newTrip.description,
-      joinedMembers: []
+      budget: newTrip.budget,
+      maxPeople: newTrip.maxPeople,
+      category: newTrip.category
     };
-
-    setAvailableTrips([tripToAdd, ...availableTrips]);
+    
+    const missingFields = Object.entries(requiredFields)
+      .filter(([_, value]) => !value)
+      .map(([field]) => field);
+    
+    if (missingFields.length > 0) {
+      alert(`Please fill in all required fields: ${missingFields.join(', ')}`);
+      return;
+    }
+    
+    // Generate a unique ID for the new trip
+    const tripId = Date.now().toString();
+    
+    // Create a new trip object with all required fields
+    const tripToAdd = {
+      id: tripId,
+      title: newTrip.destination,
+      destination: newTrip.destination,
+      duration: `${Math.ceil((new Date(newTrip.toDate) - new Date(newTrip.fromDate)) / (1000 * 60 * 60 * 24))} days`,
+      date: `${newTrip.fromDate} to ${newTrip.toDate}`,
+      fromDate: newTrip.fromDate,
+      toDate: newTrip.toDate,
+      price: `$${newTrip.budget}`,
+      budget: newTrip.budget,
+      transport: newTrip.transport,
+      description: newTrip.description || "Experience the journey of a lifetime with fellow travelers.",
+      category: newTrip.category,
+      spots: parseInt(newTrip.maxPeople, 10),
+      maxSpots: parseInt(newTrip.maxPeople, 10),
+      image: newTrip.coverImage || "/assets/images/default-trip.jpg",
+      organizer: "Current User", // Replace with actual current user name
+      organizerId: "current_user_id", // Replace with actual current user ID
+      organizerAvatar: "/assets/images/sarachen.jpeg", // Replace with actual current user avatar
+      joinedMembers: [],
+      tags: [newTrip.category, "Adventure", "Travel"],
+      rating: "4.8",
+      status: "planning",
+      genderPreference: newTrip.genderPreference,
+      // Removed priorities
+      itinerary: [],
+      memories: [],
+      // Add these properties to ensure compatibility with trip details modal
+      joinedDate: new Date().toISOString().split('T')[0],
+      reviews: [],
+      location: newTrip.destination
+    };
+    
+    console.log("Trip to add:", tripToAdd);
+    
+    // Update state with the new trip
+    setAvailableTrips(prevTrips => [tripToAdd, ...prevTrips]);
+    
+    // Close the modal
     setShowPostTrip(false);
+    
+    // Reset form
     setNewTrip({
       destination: '',
       departure: '',
@@ -419,10 +473,15 @@ export default function Dashboard({ onLogout }) {
       toDate: '',
       transport: '',
       budget: '',
-      description: ''
+      currency: 'USD', // Reset to default currency
+      description: '',
+      category: '',
+      coverImage: null,
+      genderPreference: 'anyone', // Reset to default gender preference
+      priorities: [] // Reset priorities
     });
-
-    alert('Trip posted successfully!');
+    
+    console.log("Trip posted successfully");
   };
 
   // Handle functions
@@ -470,7 +529,8 @@ export default function Dashboard({ onLogout }) {
   };
 
   const handleViewTrip = (trip) => {
-    setSelectedTrip(trip);
+    console.log("Viewing trip:", trip); // Add this to debug
+    setSelectedTrip({...trip}); // Create a new object to ensure all properties are copied
     setShowTripDetails(true);
   };
 
@@ -561,19 +621,46 @@ export default function Dashboard({ onLogout }) {
     setShowMemberProfiles(false);
   };
 
+  // Filtered trips based on search term
+  const filteredTrips = availableTrips.filter(trip => 
+    trip.destination.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    trip.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    trip.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f8f4e3] to-[#f0d9b5]">
       {/* Header */}
       <header className="bg-gradient-to-r from-[#2c5e4a] to-[#1a3a2a] shadow-lg sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-xl sm:text-2xl font-bold text-[#f8d56b]">NomadNova</h1>
-              <nav className="hidden md:flex space-x-6">
-                <a href="#trips" className="text-[#a8c4b8] hover:text-[#f8d56b] transition-colors font-cinzel">Trips</a>
-                <a href="#completed" className="text-[#a8c4b8] hover:text-[#f8d56b] transition-colors font-cinzel">Completed</a>
-                <a href="#destinations" className="text-[#a8c4b8] hover:text-[#f8d56b] transition-colors font-cinzel">Destinations</a>
-              </nav>
+            <div className="flex items-center relative">
+              <div className="flex items-center">
+                <img 
+                  src="/assets/images/NomadNovalogo.jpg" 
+                  alt="NomadNova Logo" 
+                  className="w-12 h-12 rounded-full mr-3"
+                />
+                <h1 className="text-xl sm:text-2xl font-bold text-[#f8d56b]">NomadNova</h1>
+              </div>
+              {/* Make desktop links disappear on mobile */}
+              <div className="hidden md:absolute md:left-[calc(100%+1rem)] md:whitespace-nowrap md:flex md:items-center md:h-full">
+                <a 
+                  href="#trips" 
+                  className="px-4 text-[#a8c4b8] hover:text-[#f8d56b] transition-colors font-cinzel text-base translate-y-1"
+                  onClick={() => setMobileMenuOpen(false)}
+                >Trips</a>
+                <a 
+                  href="#destinations" 
+                  className="px-4 text-[#a8c4b8] hover:text-[#f8d56b] transition-colors font-cinzel text-base translate-y-1"
+                  onClick={() => setMobileMenuOpen(false)}
+                >Destinations</a>
+                <a 
+                  href="#completed" 
+                  className="px-4 text-[#a8c4b8] hover:text-[#f8d56b] transition-colors font-cinzel text-base translate-y-1"
+                  onClick={() => setMobileMenuOpen(false)}
+                >Completed</a>
+              </div>
             </div>
             
             {/* Mobile menu button */}
@@ -597,17 +684,19 @@ export default function Dashboard({ onLogout }) {
               />
               <button
                 onClick={handleShowProfile}
-                className="flex items-center space-x-2 bg-[#6F93AD] hover:bg-[#5E5854] text-white px-4 py-2 rounded-full transition-colors font-cinzel flex items-center justify-center"
+                className="flex items-center space-x-2 text-white transition-colors font-cinzel"
               >
                 <img
                   src={currentUser.avatar}
                   alt="Profile"
-                  className="w-6 h-6 rounded-full border border-white"
+                  className="w-10 h-10 rounded-full border-2 border-[#f8d56b] object-cover"
                 />
-                <span>Profile</span>
               </button>
               <button
-                onClick={() => setShowPostTrip(true)}
+                onClick={() => {
+                  setShowPostTrip(true);
+                  setMobileMenuOpen(false);
+                }}
                 className="bg-gradient-to-r from-[#f8a95d] to-[#f87c6d] hover:from-[#f87c6d] hover:to-[#f8a95d] text-white px-6 py-2 rounded-full transition-colors font-cinzel shadow-lg flex items-center"
               >
                 <FiPlus className="mr-1" />
@@ -626,9 +715,21 @@ export default function Dashboard({ onLogout }) {
           {mobileMenuOpen && (
             <div className="md:hidden bg-[#1a3a2a] py-4 px-2 rounded-b-lg">
               <nav className="flex flex-col space-y-3">
-                <a href="#trips" className="text-[#a8c4b8] hover:text-[#f8d56b] transition-colors font-cinzel py-2 px-4">Trips</a>
-                <a href="#completed" className="text-[#a8c4b8] hover:text-[#f8d56b] transition-colors font-cinzel py-2 px-4">Completed</a>
-                <a href="#destinations" className="text-[#a8c4b8] hover:text-[#f8d56b] transition-colors font-cinzel py-2 px-4">Destinations</a>
+                <a 
+                  href="#trips" 
+                  className="text-[#a8c4b8] hover:text-[#f8d56b] transition-colors font-cinzel py-2 px-4"
+                  onClick={() => setMobileMenuOpen(false)}
+                >Trips</a>
+                <a 
+                  href="#completed" 
+                  className="text-[#a8c4b8] hover:text-[#f8d56b] transition-colors font-cinzel py-2 px-4"
+                  onClick={() => setMobileMenuOpen(false)}
+                >Completed</a>
+                <a 
+                  href="#destinations" 
+                  className="text-[#a8c4b8] hover:text-[#f8d56b] transition-colors font-cinzel py-2 px-4"
+                  onClick={() => setMobileMenuOpen(false)}
+                >Destinations</a>
                 <hr className="border-[#2c5e4a]" />
                 <button
                   onClick={handleShowProfile}
@@ -637,12 +738,15 @@ export default function Dashboard({ onLogout }) {
                   <img
                     src={currentUser.avatar}
                     alt="Profile"
-                    className="w-6 h-6 rounded-full border border-white"
+                    className="w-10 h-10 rounded-full border-2 border-[#f8d56b] object-cover"
                   />
                   <span>Profile</span>
                 </button>
                 <button
-                  onClick={() => setShowPostTrip(true)}
+                  onClick={() => {
+                    setShowPostTrip(true);
+                    setMobileMenuOpen(false);
+                  }}
                   className="flex items-center space-x-2 text-[#a8c4b8] hover:text-[#f8d56b] transition-colors font-cinzel py-2 px-4 text-left"
                 >
                   <FiPlus className="mr-1" />
@@ -677,36 +781,43 @@ export default function Dashboard({ onLogout }) {
         {/* Welcome Section */}
         <section className="text-center bg-gradient-to-r from-[#6F93AD] to-[#4a708a] rounded-2xl p-4 sm:p-8 border border-[#5E5854] shadow-xl">
           <h2 className="text-2xl sm:text-4xl font-bold mb-2 sm:mb-4 text-white">Welcome back, Traveler!</h2>
-          <p className="text-lg sm:text-xl text-white/90 font-greatvibes">Discover your next adventure with like-minded explorers</p>
+          <p className="font-southmind text-lg sm:text-xl text-white/90">Discover your next adventure with like-minded explorers</p>
         </section>
 
         {/* Available Trips Carousel */}
-        <section id="trips" className="space-y-6">
-          <div className="flex justify-between items-center">
+        <section id="trips" className="space-y-6 scroll-mt-24">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
             <h3 className="text-3xl font-bold text-[#2c5e4a]">Available Trips</h3>
-            <div className="flex space-x-2">
-              <button
-                onClick={() => setCurrentTripIndex((prev) => (prev - 1 + mockTrips.length) % mockTrips.length)}
-                className="p-3 bg-gradient-to-r from-[#f8a95d] to-[#f87c6d] hover:from-[#f87c6d] hover:to-[#f8a95d] rounded-full text-white transition-colors shadow-lg font-cinzel"
-              >
-                <FiChevronLeft className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => setCurrentTripIndex((prev) => (prev + 1) % mockTrips.length)}
-                className="p-3 bg-gradient-to-r from-[#f8a95d] to-[#f87c6d] hover:from-[#f87c6d] hover:to-[#f8a95d] rounded-full text-white transition-colors shadow-lg font-cinzel"
-              >
-                <FiChevronRight className="w-5 h-5" />
-              </button>
+            
+            {/* Search Bar */}
+            <div className="relative w-full sm:w-96">
+              <input
+                type="text"
+                placeholder="Search destinations, trip titles, or tags..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 py-2 pr-10 border border-[#d1c7b7] rounded-lg focus:ring-2 focus:ring-[#f8a95d] focus:border-[#f8a95d] focus:outline-none hover:border-[#f8a95d] text-[#5E5854] bg-white/90 backdrop-blur-sm"
+              />
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-[#5E5854]">
+                <FiSearch className="w-5 h-5" />
+              </div>
             </div>
           </div>
 
+          {/* No Results Message */}
+          {filteredTrips.length === 0 && (
+            <div className="text-center py-8 bg-white rounded-xl border border-[#d1c7b7]">
+              <FiSearch className="w-12 h-12 mx-auto text-[#a8c4b8] mb-4" />
+              <h4 className="text-xl font-bold text-[#2c5e4a] mb-2">No trips found</h4>
+              <p className="text-[#5E5854]">Try adjusting your search terms or check back later for new trips.</p>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {availableTrips.map((trip, index) => (
+            {filteredTrips.map((trip, index) => (
               <div
                 key={trip.id}
-                className={`bg-white rounded-2xl overflow-hidden border border-[#d1c7b7] shadow-lg transition-all duration-300 transform ${
-                  index === currentTripIndex ? 'scale-105 z-10 ring-2 ring-[#f8a95d]' : 'scale-100 opacity-90 hover:scale-102'
-                }`}
+                className="bg-white rounded-2xl overflow-hidden border border-[#d1c7b7] shadow-lg transition-all duration-300 transform hover:scale-105 hover:z-10 hover:ring-2 hover:ring-[#f8a95d]"
               >
                 <div className="relative">
                   <img
@@ -716,7 +827,7 @@ export default function Dashboard({ onLogout }) {
                   />
                   <div className="absolute top-4 right-4">
                     <span className="bg-gradient-to-r from-[#f8a95d] to-[#f87c6d] text-white px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-bold shadow-lg">
-                      {trip.price}
+                      approx {trip.price}
                     </span>
                   </div>
                 </div>
@@ -736,6 +847,9 @@ export default function Dashboard({ onLogout }) {
                   </p>
                   <p className="text-[#5E5854] mb-3 flex items-center">
                     <FiCalendar className="mr-1" /> {trip.duration} • {trip.date}
+                  </p>
+                  <p className="text-[#5E5854] text-sm mb-3">
+                    <span className="font-medium">Category:</span> {trip.tags[0]}
                   </p>
                   <p className="text-[#5E5854] text-sm mb-3">Organized by {trip.organizer}</p>
                   <div className="flex flex-wrap gap-2 mb-4">
@@ -795,203 +909,244 @@ export default function Dashboard({ onLogout }) {
         </section>
 
         {/* Enhanced Trip Details Modal */}
-        {showTripDetails && selectedTrip && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-            <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
-              {/* Modal Header with Close Button */}
-              <div className="sticky top-0 bg-white z-10 flex justify-between items-center p-4 border-b border-[#d1c7b7]">
-                <h3 className="text-xl sm:text-2xl font-bold text-[#2c5e4a]">{selectedTrip.title}</h3>
-                <button 
+        {showTripDetails && (
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+            <div className="bg-gradient-to-br from-[#f8f4e3] to-[#f0d9b5] rounded-xl w-full max-w-4xl h-[90vh] shadow-2xl flex flex-col overflow-hidden">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-[#2c5e4a] to-[#1a3a2a] p-4 sm:p-6 flex justify-between items-center">
+                <h3 className="text-xl sm:text-2xl font-bold text-white">{selectedTrip.title}</h3>
+                <button
                   onClick={() => setShowTripDetails(false)}
-                  className="text-[#5E5854] hover:text-[#2c5e4a] p-2 rounded-full"
+                  className="p-2 hover:bg-[#f8d56b] rounded-full text-white hover:text-[#2c5e4a] transition-colors"
                 >
-                  <FiX className="w-5 h-5 sm:w-6 sm:h-6" />
+                  <FiX className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Modal Content */}
-              <div className="p-4 sm:p-6">
-                {/* Trip Image and Basic Info */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  <div className="relative h-64 rounded-xl overflow-hidden">
-                    <img
-                      src={selectedTrip.image}
-                      alt={selectedTrip.title}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute top-4 right-4">
-                      <span className="bg-gradient-to-r from-[#f8a95d] to-[#f87c6d] text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
-                        {selectedTrip.price}
-                      </span>
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto">
+                {/* Modal Content */}
+                <div className="p-4 sm:p-6">
+                  {/* Trip Image and Basic Info */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div className="relative h-64 rounded-xl overflow-hidden">
+                      <img
+                        src={selectedTrip.image}
+                        alt={selectedTrip.title}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute top-4 right-4">
+                        <span className="bg-gradient-to-r from-[#f8a95d] to-[#f87c6d] text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
+                          {selectedTrip.price}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-white p-4 rounded-xl border border-[#d1c7b7]">
+                      <h4 className="font-bold text-[#2c5e4a] mb-3">Trip Details</h4>
+                      <div className="space-y-2 text-[#5E5854]">
+                        <p className="flex items-center">
+                          <FiMapPin className="mr-2" /> <span className="font-medium">Destination:</span> {selectedTrip.destination}
+                        </p>
+                        <p className="flex items-center">
+                          <FiCalendar className="mr-2" /> <span className="font-medium">Duration:</span> {selectedTrip.duration}
+                        </p>
+                        <p className="flex items-center">
+                          <FiCalendar className="mr-2" /> <span className="font-medium">Dates:</span> {selectedTrip.date}
+                        </p>
+                        <p className="flex items-center">
+                          <FiUsers className="mr-2" /> <span className="font-medium">Available Spots:</span> {selectedTrip.spots}/{selectedTrip.maxSpots}
+                        </p>
+                        <p className="flex items-center">
+                          <FiStar className="mr-2" /> <span className="font-medium">Category:</span> {selectedTrip.tags && selectedTrip.tags.length > 0 ? selectedTrip.tags[0] : 'Adventure'}
+                        </p>
+                        {selectedTrip.transport && (
+                          <p className="flex items-center">
+                            <FiNavigation className="mr-2" /> <span className="font-medium">Transport:</span> {selectedTrip.transport}
+                          </p>
+                        )}
+                        {/* Gender Preference */}
+                        <p className="flex items-center">
+                          <FiUsers className="mr-2" /> <span className="font-medium">Gender Preference:</span> 
+                          <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                            selectedTrip.genderPreference === "womenOnly" 
+                              ? 'bg-pink-100 text-pink-700' 
+                              : selectedTrip.genderPreference === "menOnly"
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-green-100 text-green-700'
+                          }`}>
+                            {selectedTrip.genderPreference === "womenOnly" 
+                              ? 'Women Only' 
+                              : selectedTrip.genderPreference === "menOnly"
+                              ? 'Men Only'
+                              : 'Anyone Welcome'}
+                          </span>
+                        </p>
+                        {/* Removed Trip Priority section */}
+                      </div>
                     </div>
                   </div>
-                  
-                  <div className="bg-[#f8f4e3] p-4 rounded-xl border border-[#d1c7b7]">
-                    <h4 className="font-bold text-[#2c5e4a] mb-3">Trip Details</h4>
-                    <div className="space-y-2 text-[#5E5854]">
-                      <p className="flex items-center">
-                        <FiMapPin className="mr-2" /> <span className="font-medium">Destination:</span> {selectedTrip.destination}
-                      </p>
-                      <p className="flex items-center">
-                        <FiCalendar className="mr-2" /> <span className="font-medium">Duration:</span> {selectedTrip.duration}
-                      </p>
-                      <p className="flex items-center">
-                        <FiCalendar className="mr-2" /> <span className="font-medium">Dates:</span> {selectedTrip.date}
-                      </p>
-                      <p className="flex items-center">
-                        <FiUsers className="mr-2" /> <span className="font-medium">Available Spots:</span> {selectedTrip.spots}/{selectedTrip.maxSpots}
-                      </p>
-                      {selectedTrip.transport && (
-                        <p className="flex items-center">
-                          <FiNavigation className="mr-2" /> <span className="font-medium">Transport:</span> {selectedTrip.transport}
-                        </p>
+
+                  {/* Trip Description */}
+                  <div className="bg-white p-4 rounded-xl border border-[#d1c7b7] mb-6">
+                    <h4 className="font-bold text-[#2c5e4a] mb-3">About This Trip</h4>
+                    <p className="text-[#5E5854]">{selectedTrip.description || "No description available."}</p>
+                  </div>
+
+                  {/* Trip Cost Breakdown and Map */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    {/* Cost Breakdown */}
+                    <div className="bg-white p-4 rounded-xl border border-[#d1c7b7]">
+                      <h4 className="font-bold text-[#2c5e4a] mb-3">Cost Breakdown</h4>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center pb-2 border-b border-[#d1c7b7]">
+                          <span className="text-[#5E5854]">Base Price</span>
+                          <span className="font-medium text-[#2c5e4a]">{selectedTrip.price}</span>
+                        </div>
+                        <div className="flex justify-between items-center pb-2 border-b border-[#d1c7b7]">
+                          <span className="text-[#5E5854]">Accommodation</span>
+                          <span className="font-medium text-[#2c5e4a]">Included</span>
+                        </div>
+                        <div className="flex justify-between items-center pb-2 border-b border-[#d1c7b7]">
+                          <span className="text-[#5E5854]">Activities</span>
+                          <span className="font-medium text-[#2c5e4a]">Included</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-2">
+                          <span className="font-bold text-[#2c5e4a]">Total Cost</span>
+                          <span className="font-bold text-[#f87c6d]">approx {selectedTrip.price}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Google Map */}
+                    <div className="bg-white p-4 rounded-xl border border-[#d1c7b7] h-full min-h-[200px]">
+                      <h4 className="font-bold text-[#2c5e4a] mb-3">Destination Map</h4>
+                      <div className="h-[calc(100%-2rem)] min-h-[150px] rounded-lg overflow-hidden border border-[#d1c7b7]">
+                        <iframe
+                          title={`Map of ${selectedTrip.destination}`}
+                          className="w-full h-full"
+                          frameBorder="0"
+                          src={`https://www.google.com/maps/embed/v1/place?key=YOUR_API_KEY&q=${encodeURIComponent(selectedTrip.destination)}`}
+                          allowFullScreen
+                        ></iframe>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Trip Statistics */}
+                  <div className="bg-white p-4 rounded-xl border border-[#d1c7b7] mb-6">
+                    <h4 className="font-bold text-[#2c5e4a] mb-3">Trip Statistics</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                      <div className="bg-[#f8f4e3] p-3 rounded-lg">
+                        <p className="text-2xl font-bold text-[#f87c6d]">{selectedTrip.maxSpots - selectedTrip.spots}</p>
+                        <p className="text-[#5E5854] text-sm">Travelers Joined</p>
+                      </div>
+                      <div className="bg-[#f8f4e3] p-3 rounded-lg">
+                        <p className="text-2xl font-bold text-[#f87c6d]">{selectedTrip.duration.split(' ')[0]}</p>
+                        <p className="text-[#5E5854] text-sm">Days</p>
+                      </div>
+                      <div className="bg-[#f8f4e3] p-3 rounded-lg">
+                        <p className="text-2xl font-bold text-[#f87c6d]">4.8</p>
+                        <p className="text-[#5E5854] text-sm">Rating</p>
+                      </div>
+                      <div className="bg-[#f8f4e3] p-3 rounded-lg">
+                        <p className="text-2xl font-bold text-[#f87c6d]">{selectedTrip.tags?.length || 0}</p>
+                        <p className="text-[#5E5854] text-sm">Categories</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Trip Members */}
+                  <div className="bg-white p-4 rounded-xl border border-[#d1c7b7] mb-6">
+                    <div className="flex justify-between items-center mb-3">
+                      <h4 className="font-bold text-[#2c5e4a]">Trip Members</h4>
+                      <button 
+                        onClick={() => handleViewAllMembers(selectedTrip)}
+                        className="text-[#f87c6d] hover:text-[#f8a95d] text-sm font-medium"
+                      >
+                        View All
+                      </button>
+                    </div>
+                    
+                    {/* Organizer */}
+                    <div className="mb-4">
+                      <p className="text-[#5E5854] mb-2 text-sm">Organizer:</p>
+                      <div className="flex items-center bg-[#f8f4e3] p-3 rounded-lg border border-[#d1c7b7]">
+                        <img
+                          src={selectedTrip.organizerAvatar || "/assets/images/default-avatar.jpg"}
+                          alt={selectedTrip.organizer || "Trip Organizer"}
+                          className="w-10 h-10 rounded-full object-cover mr-3 cursor-pointer"
+                          onClick={() => handleViewMemberProfile({
+                            id: selectedTrip.organizerId || "organizer_id",
+                            name: selectedTrip.organizer || "Trip Organizer",
+                            avatar: selectedTrip.organizerAvatar || "/assets/images/default-avatar.jpg",
+                            role: 'organizer'
+                          })}
+                        />
+                        <div>
+                          <h5 className="font-medium text-[#2c5e4a]">{selectedTrip.organizer || "Trip Organizer"}</h5>
+                          <p className="text-xs text-[#5E5854]">Trip Organizer</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Members Preview (showing only a few) */}
+                    <div>
+                      <p className="text-[#5E5854] mb-2 text-sm">Members ({selectedTrip.joinedMembers?.length || 0}):</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {selectedTrip.joinedMembers?.slice(0, 4).map(member => (
+                          <div key={member.id} className="flex items-center bg-[#f8f4e3] p-3 rounded-lg border border-[#d1c7b7]">
+                            <img
+                              src={member.avatar}
+                              alt={member.name}
+                              className="w-10 h-10 rounded-full object-cover mr-3 cursor-pointer"
+                              onClick={() => handleViewMemberProfile(member)}
+                            />
+                            <div>
+                              <h5 className="font-medium text-[#2c5e4a]">{member.name}</h5>
+                              <p className="text-xs text-[#5E5854]">Joined {member.joinedDate}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {selectedTrip.joinedMembers?.length > 4 && (
+                        <div className="mt-3 text-center">
+                          <button 
+                            onClick={() => handleViewAllMembers(selectedTrip)}
+                            className="text-[#f87c6d] hover:text-[#f8a95d] text-sm font-medium"
+                          >
+                            + {selectedTrip.joinedMembers.length - 4} more members
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
-                </div>
 
-                {/* Trip Description */}
-                <div className="bg-[#f8f4e3] p-4 rounded-xl border border-[#d1c7b7] mb-6">
-                  <h4 className="font-bold text-[#2c5e4a] mb-3">About This Trip</h4>
-                  <p className="text-[#5E5854]">{selectedTrip.description || "No description available."}</p>
-                </div>
-
-                {/* Trip Cost Breakdown */}
-                <div className="bg-[#f8f4e3] p-4 rounded-xl border border-[#d1c7b7] mb-6">
-                  <h4 className="font-bold text-[#2c5e4a] mb-3">Cost Breakdown</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center pb-2 border-b border-[#d1c7b7]">
-                      <span className="text-[#5E5854]">Base Price</span>
-                      <span className="font-medium text-[#2c5e4a]">{selectedTrip.price}</span>
-                    </div>
-                    <div className="flex justify-between items-center pb-2 border-b border-[#d1c7b7]">
-                      <span className="text-[#5E5854]">Accommodation</span>
-                      <span className="font-medium text-[#2c5e4a]">Included</span>
-                    </div>
-                    <div className="flex justify-between items-center pb-2 border-b border-[#d1c7b7]">
-                      <span className="text-[#5E5854]">Activities</span>
-                      <span className="font-medium text-[#2c5e4a]">Included</span>
-                    </div>
-                    <div className="flex justify-between items-center pt-2">
-                      <span className="font-bold text-[#2c5e4a]">Total Cost</span>
-                      <span className="font-bold text-[#f87c6d]">{selectedTrip.price}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Trip Statistics */}
-                <div className="bg-[#f8f4e3] p-4 rounded-xl border border-[#d1c7b7] mb-6">
-                  <h4 className="font-bold text-[#2c5e4a] mb-3">Trip Statistics</h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-                    <div className="bg-white p-3 rounded-lg">
-                      <p className="text-2xl font-bold text-[#f87c6d]">{selectedTrip.maxSpots - selectedTrip.spots}</p>
-                      <p className="text-[#5E5854] text-sm">Travelers Joined</p>
-                    </div>
-                    <div className="bg-white p-3 rounded-lg">
-                      <p className="text-2xl font-bold text-[#f87c6d]">{selectedTrip.duration.split(' ')[0]}</p>
-                      <p className="text-[#5E5854] text-sm">Days</p>
-                    </div>
-                    <div className="bg-white p-3 rounded-lg">
-                      <p className="text-2xl font-bold text-[#f87c6d]">4.8</p>
-                      <p className="text-[#5E5854] text-sm">Rating</p>
-                    </div>
-                    <div className="bg-white p-3 rounded-lg">
-                      <p className="text-2xl font-bold text-[#f87c6d]">{selectedTrip.tags?.length || 0}</p>
-                      <p className="text-[#5E5854] text-sm">Categories</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Trip Members */}
-                <div className="bg-[#f8f4e3] p-4 rounded-xl border border-[#d1c7b7] mb-6">
-                  <div className="flex justify-between items-center mb-3">
-                    <h4 className="font-bold text-[#2c5e4a]">Trip Members</h4>
-                    <button 
-                      onClick={() => handleViewAllMembers(selectedTrip)}
-                      className="text-[#f87c6d] hover:text-[#f8a95d] text-sm font-medium"
+                  {/* Action Buttons */}
+                  <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
+                    <button
+                      onClick={() => setShowTripDetails(false)}
+                      className="flex-1 bg-[#5E5854] hover:bg-[#2c5e4a] text-white py-3 rounded-xl transition-colors font-cinzel"
                     >
-                      View All
+                      Close
                     </button>
-                  </div>
-                  
-                  {/* Organizer */}
-                  <div className="mb-4">
-                    <p className="text-[#5E5854] mb-2 text-sm">Organizer:</p>
-                    <div className="flex items-center bg-white p-3 rounded-lg border border-[#d1c7b7]">
-                      <img
-                        src={selectedTrip.organizerAvatar}
-                        alt={selectedTrip.organizer}
-                        className="w-10 h-10 rounded-full object-cover mr-3 cursor-pointer"
-                        onClick={() => handleViewMemberProfile({
-                          id: selectedTrip.organizerId,
-                          name: selectedTrip.organizer,
-                          avatar: selectedTrip.organizerAvatar,
-                          role: 'organizer'
-                        })}
-                      />
-                      <div>
-                        <h5 className="font-medium text-[#2c5e4a]">{selectedTrip.organizer}</h5>
-                        <p className="text-xs text-[#5E5854]">Trip Organizer</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Members Preview (showing only a few) */}
-                  <div>
-                    <p className="text-[#5E5854] mb-2 text-sm">Members ({selectedTrip.joinedMembers?.length || 0}):</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {selectedTrip.joinedMembers?.slice(0, 4).map(member => (
-                        <div key={member.id} className="flex items-center bg-white p-3 rounded-lg border border-[#d1c7b7]">
-                          <img
-                            src={member.avatar}
-                            alt={member.name}
-                            className="w-10 h-10 rounded-full object-cover mr-3 cursor-pointer"
-                            onClick={() => handleViewMemberProfile(member)}
-                          />
-                          <div>
-                            <h5 className="font-medium text-[#2c5e4a]">{member.name}</h5>
-                            <p className="text-xs text-[#5E5854]">Joined {member.joinedDate}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    {selectedTrip.joinedMembers?.length > 4 && (
-                      <div className="mt-3 text-center">
-                        <button 
-                          onClick={() => handleViewAllMembers(selectedTrip)}
-                          className="text-[#f87c6d] hover:text-[#f8a95d] text-sm font-medium"
-                        >
-                          + {selectedTrip.joinedMembers.length - 4} more members
-                        </button>
-                      </div>
+                    
+                    {joinedTrips.includes(selectedTrip.id) ? (
+                      <button
+                        onClick={() => handleStartGroupChat()}
+                        className="flex-1 bg-gradient-to-r from-[#f8a95d] to-[#f87c6d] hover:from-[#f87c6d] hover:to-[#f8a95d] text-white py-3 rounded-xl transition-colors font-cinzel flex items-center justify-center"
+                      >
+                        <FiMessageSquare className="mr-2" /> Group Chat
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleJoinTrip(selectedTrip.id)}
+                        className="flex-1 bg-gradient-to-r from-[#f8a95d] to-[#f87c6d] hover:from-[#f87c6d] hover:to-[#f8a95d] text-white py-3 rounded-xl transition-colors font-cinzel"
+                      >
+                        Join Trip
+                      </button>
                     )}
                   </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
-                  <button
-                    onClick={() => setShowTripDetails(false)}
-                    className="flex-1 bg-[#5E5854] hover:bg-[#2c5e4a] text-white py-3 rounded-xl transition-colors font-cinzel"
-                  >
-                    Close
-                  </button>
-                  
-                  {joinedTrips.includes(selectedTrip.id) ? (
-                    <button
-                      onClick={() => handleStartGroupChat()}
-                      className="flex-1 bg-gradient-to-r from-[#f8a95d] to-[#f87c6d] hover:from-[#f87c6d] hover:to-[#f8a95d] text-white py-3 rounded-xl transition-colors font-cinzel flex items-center justify-center"
-                    >
-                      <FiMessageSquare className="mr-2" /> Group Chat
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleJoinTrip(selectedTrip.id)}
-                      className="flex-1 bg-gradient-to-r from-[#f8a95d] to-[#f87c6d] hover:from-[#f87c6d] hover:to-[#f8a95d] text-white py-3 rounded-xl transition-colors font-cinzel"
-                    >
-                      Join Trip
-                    </button>
-                  )}
                 </div>
               </div>
             </div>
@@ -999,32 +1154,22 @@ export default function Dashboard({ onLogout }) {
         )}
 
         {/* Completed Trips Section */}
-        <section id="completed" className="space-y-4 sm:space-y-6">
+        <section id="completed" className="space-y-4 sm:space-y-6 scroll-mt-24">
           <div className="flex justify-between items-center">
-            <h3 className="text-xl sm:text-3xl font-bold text-[#2c5e4a]">Completed Trips</h3>
-            <div className="flex space-x-2">
-              <button
-                onClick={() => setCurrentCompletedIndex((prev) => (prev - 1 + completedTrips.length) % completedTrips.length)}
-                className="p-2 sm:p-3 bg-gradient-to-r from-[#f8a95d] to-[#f87c6d] hover:from-[#f87c6d] hover:to-[#f8a95d] rounded-full text-white transition-colors shadow-lg"
-              >
-                <FiChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-              </button>
-              <button
-                onClick={() => setCurrentCompletedIndex((prev) => (prev + 1) % completedTrips.length)}
-                className="p-2 sm:p-3 bg-gradient-to-r from-[#f8a95d] to-[#f87c6d] hover:from-[#f87c6d] hover:to-[#f8a95d] rounded-full text-white transition-colors shadow-lg"
-              >
-                <FiChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
-              </button>
-            </div>
+            <h3 className="text-xl sm:text-3xl font-bold text-[#2c5e4a]">The road so far</h3>
+            <button 
+              onClick={() => navigate('/memories')} 
+              className="text-[#f87c6d] hover:text-[#f8a95d] text-sm font-medium flex items-center"
+            >
+              View All <FiArrowRight className="ml-1" />
+            </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             {completedTrips.map((trip, index) => (
               <div
                 key={trip.id}
-                className={`bg-white rounded-2xl overflow-hidden border border-[#d1c7b7] shadow-lg transition-all duration-300 transform ${
-                  index === currentCompletedIndex ? 'scale-105 z-10 ring-2 ring-[#f8a95d]' : 'scale-100 opacity-90 hover:scale-102'
-                }`}
+                className="bg-white rounded-2xl overflow-hidden border border-[#d1c7b7] shadow-lg transition-all duration-300 transform hover:scale-105 hover:z-10 hover:ring-2 hover:ring-[#f8a95d]"
                 onClick={() => {
                   setSelectedTrip(trip);
                   setShowTripDetails(true);
@@ -1037,27 +1182,65 @@ export default function Dashboard({ onLogout }) {
                     alt={trip.title}
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-4 sm:p-6">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex flex-col justify-end p-4 sm:p-6">
+                    <div className="flex items-center mb-2">
+                      <span className="bg-[#f8d56b] text-[#2c5e4a] px-2 py-1 rounded-full text-xs font-bold">
+                        Completed
+                      </span>
+                    </div>
                     <h4 className="text-xl sm:text-2xl font-bold text-white">{trip.title}</h4>
                     <p className="text-white/90">{trip.destination}</p>
                     <div className="flex justify-between items-center mt-3">
                       <span className="text-white flex items-center">
                         <FiCalendar className="mr-1" /> {trip.date}
                       </span>
-                      <span className="flex items-center text-white">
-                        <FiStar className="text-[#f8d56b] mr-1" /> {trip.rating}
+                      <div className="flex items-center">
+                        <span className="flex items-center text-white bg-black/30 px-2 py-1 rounded-full">
+                          <FiStar className="text-[#f8d56b] mr-1" /> {trip.rating}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center mt-3">
+                      <span className="text-white flex items-center text-sm">
+                        <FiUsers className="mr-1" /> {trip.participants} travelers
                       </span>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Handle view memories
+                          navigate(`/memories/${trip.id}`);
+                        }}
+                        className="bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-full text-sm flex items-center backdrop-blur-sm transition-colors"
+                      >
+                        <FiCamera className="mr-1" /> The story behind the stroll
+                      </button>
                     </div>
                   </div>
                 </div>
               </div>
             ))}
+            
+            {completedTrips.length === 0 && (
+              <div className="col-span-1 sm:col-span-2 bg-white p-6 rounded-xl border border-[#d1c7b7] text-center">
+                <div className="flex flex-col items-center justify-center py-8">
+                  <FiMapPin className="w-12 h-12 text-[#a8c4b8] mb-4" />
+                  <h4 className="text-xl font-bold text-[#2c5e4a] mb-2">No Completed Trips Yet</h4>
+                  <p className="text-[#5E5854] mb-4">Your completed trips will appear here.</p>
+                  <button 
+                    onClick={() => navigate('/trips')}
+                    className="bg-gradient-to-r from-[#f8a95d] to-[#f87c6d] hover:from-[#f87c6d] hover:to-[#f8a95d] text-white px-4 py-2 rounded-full transition-colors font-cinzel"
+                  >
+                    Explore Trips
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
         {/* Testimonials Section */}
         <section className="space-y-4 sm:space-y-6">
-          <h3 className="text-xl sm:text-3xl font-bold text-[#2c5e4a]">Traveler Testimonials</h3>
+          <h3 className="text-xl sm:text-3xl font-bold text-[#2c5e4a]">Chronicles of Nomads</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             {testimonials.map((testimonial) => (
               <div key={testimonial.id} className="bg-white rounded-2xl p-4 sm:p-6 border border-[#d1c7b7] shadow-lg">
@@ -1087,7 +1270,7 @@ export default function Dashboard({ onLogout }) {
         </section>
 
         {/* Popular Destinations Section */}
-        <section id="destinations" className="space-y-4 sm:space-y-6">
+        <section id="destinations" className="space-y-4 sm:space-y-6 scroll-mt-24">
           <h3 className="text-xl sm:text-3xl font-bold text-[#2c5e4a]">Popular Destinations</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             {popularDestinations.map((destination) => (
@@ -1113,42 +1296,42 @@ export default function Dashboard({ onLogout }) {
         {/* Post Trip Modal */}
         {showPostTrip && (
   <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-    <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div className="bg-gradient-to-br from-[#f8f4e3] to-[#f0d9b5] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
       {/* Modal Header with Close Button */}
-      <div className="sticky top-0 bg-white z-10 flex justify-between items-center p-4 border-b border-[#d1c7b7]">
-        <h3 className="text-xl sm:text-2xl font-bold text-[#2c5e4a]">Post a New Trip</h3>
+      <div className="sticky top-0 bg-gradient-to-r from-[#2c5e4a] to-[#1a3a2a] z-10 flex justify-between items-center p-4 border-b border-[#5E5854]">
+        <h3 className="text-xl sm:text-2xl font-bold text-white">Post a New Trip</h3>
         <button 
           onClick={() => setShowPostTrip(false)}
-          className="text-[#5E5854] hover:text-[#2c5e4a] p-2 rounded-full"
+          className="text-white hover:text-[#f8d56b] p-2 rounded-full"
         >
           <FiX className="w-5 h-5 sm:w-6 sm:h-6" />
         </button>
       </div>
 
       {/* Form Content */}
-      <form className="p-4 sm:p-6">
+      <form className="p-4 sm:p-6" onSubmit={handlePostTrip}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="block text-[#5E5854] font-medium mb-2">Destination*</label>
+            <label className="block text-[#5E5854] font-medium mb-2">Destination<span className="text-red-500">*</span></label>
             <input
               type="text"
               name="destination"
               value={newTrip.destination}
               onChange={handleInputChange}
-              className="w-full px-4 py-2 border border-[#d1c7b7] rounded-lg focus:ring-2 focus:ring-[#f8a95d] focus:border-transparent text-[#5E5854]"
+              className="w-full px-4 py-2 border border-[#d1c7b7] rounded-lg focus:ring-1 focus:ring-[#f8a95d] focus:border-[#f8a95d] focus:outline-none hover:border-[#f8a95d] text-[#5E5854]"
               placeholder="e.g. Bali, Indonesia"
               required
             />
           </div>
           <div>
-            <label className="block text-[#5E5854] font-medium mb-2">Departure From*</label>
+            <label className="block text-[#5E5854] font-medium mb-2">Departure From<span className="text-red-500">*</span></label>
             <input
               type="text"
               name="departure"
               value={newTrip.departure}
               onChange={handleInputChange}
-              className="w-full px-4 py-2 border border-[#d1c7b7] rounded-lg focus:ring-2 focus:ring-[#f8a95d] focus:border-transparent text-[#5E5854]"
-              placeholder="e.g. San Francisco, CA"
+              className="w-full px-4 py-2 border border-[#d1c7b7] rounded-lg focus:ring-1 focus:ring-[#f8a95d] focus:border-[#f8a95d] focus:outline-none hover:border-[#f8a95d] text-[#5E5854]"
+              placeholder="e.g. New York, USA"
               required
             />
           </div>
@@ -1156,24 +1339,24 @@ export default function Dashboard({ onLogout }) {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="block text-[#5E5854] font-medium mb-2">From Date*</label>
+            <label className="block text-[#5E5854] font-medium mb-2">From<span className="text-red-500">*</span></label>
             <input
               type="date"
               name="fromDate"
               value={newTrip.fromDate}
               onChange={handleInputChange}
-              className="w-full px-4 py-2 border border-[#d1c7b7] rounded-lg focus:ring-2 focus:ring-[#f8a95d] focus:border-transparent text-[#5E5854]"
+              className="w-full px-4 py-2 border border-[#d1c7b7] rounded-lg focus:ring-1 focus:ring-[#f8a95d] focus:border-[#f8a95d] focus:outline-none hover:border-[#f8a95d] text-[#5E5854]"
               required
             />
           </div>
           <div>
-            <label className="block text-[#5E5854] font-medium mb-2">To Date*</label>
+            <label className="block text-[#5E5854] font-medium mb-2">To<span className="text-red-500">*</span></label>
             <input
               type="date"
               name="toDate"
               value={newTrip.toDate}
               onChange={handleInputChange}
-              className="w-full px-4 py-2 border border-[#d1c7b7] rounded-lg focus:ring-2 focus:ring-[#f8a95d] focus:border-transparent text-[#5E5854]"
+              className="w-full px-4 py-2 border border-[#d1c7b7] rounded-lg focus:ring-1 focus:ring-[#f8a95d] focus:border-[#f8a95d] focus:outline-none hover:border-[#f8a95d] text-[#5E5854]"
               required
             />
           </div>
@@ -1181,43 +1364,15 @@ export default function Dashboard({ onLogout }) {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="block text-[#5E5854] font-medium mb-2">Current Group Size*</label>
-            <input
-              type="number"
-              name="numberOfPeople"
-              value={newTrip.numberOfPeople}
-              onChange={handleInputChange}
-              className="w-full px-4 py-2 border border-[#d1c7b7] rounded-lg focus:ring-2 focus:ring-[#f8a95d] focus:border-transparent text-[#5E5854]"
-              placeholder="e.g. 2"
-              min="1"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-[#5E5854] font-medium mb-2">Maximum Group Size*</label>
-            <input
-              type="number"
-              name="maxPeople"
-              value={newTrip.maxPeople}
-              onChange={handleInputChange}
-              className="w-full px-4 py-2 border border-[#d1c7b7] rounded-lg focus:ring-2 focus:ring-[#f8a95d] focus:border-transparent text-[#5E5854]"
-              placeholder="e.g. 6"
-              min="1"
-              required
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="block text-[#5E5854] font-medium mb-2">Transportation</label>
+            <label className="block text-[#5E5854] font-medium mb-2">Transport<span className="text-red-500">*</span></label>
             <select
               name="transport"
               value={newTrip.transport}
               onChange={handleInputChange}
-              className="w-full px-4 py-2 border border-[#d1c7b7] rounded-lg focus:ring-2 focus:ring-[#f8a95d] focus:border-transparent text-[#5E5854]"
+              className="w-full px-4 py-2 border border-[#d1c7b7] rounded-lg focus:ring-1 focus:ring-[#f8a95d] focus:border-[#f8a95d] focus:outline-none hover:border-[#f8a95d] text-[#5E5854]"
+              required
             >
-              <option value="">Select transportation</option>
+              <option value="">Select transport</option>
               <option value="Flight">Flight</option>
               <option value="Train">Train</option>
               <option value="Bus">Bus</option>
@@ -1227,28 +1382,192 @@ export default function Dashboard({ onLogout }) {
             </select>
           </div>
           <div>
-            <label className="block text-[#5E5854] font-medium mb-2">Estimated Budget*</label>
+            <label className="block text-[#5E5854] font-medium mb-2">Budget<span className="text-red-500">*</span></label>
+            <div className="flex space-x-2">
+              <select
+                name="currency"
+                value={newTrip.currency}
+                onChange={handleInputChange}
+                className="w-24 px-2 py-2 border border-[#d1c7b7] rounded-lg focus:ring-1 focus:ring-[#f8a95d] focus:border-[#f8a95d] focus:outline-none hover:border-[#f8a95d] text-[#5E5854]"
+                required
+              >
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+                <option value="GBP">GBP</option>
+                <option value="JPY">JPY</option>
+                <option value="AUD">AUD</option>
+                <option value="CAD">CAD</option>
+                <option value="CHF">CHF</option>
+                <option value="CNY">CNY</option>
+                <option value="INR">INR</option>
+                <option value="SGD">SGD</option>
+              </select>
+              <input
+                type="number"
+                name="budget"
+                value={newTrip.budget}
+                onChange={handleInputChange}
+                className="flex-1 px-4 py-2 border border-[#d1c7b7] rounded-lg focus:ring-1 focus:ring-[#f8a95d] focus:border-[#f8a95d] focus:outline-none hover:border-[#f8a95d] text-[#5E5854]"
+                placeholder="Enter amount"
+                required
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="block text-[#5E5854] font-medium mb-2">Current Number of People<span className="text-red-500">*</span></label>
             <input
-              type="text"
-              name="budget"
-              value={newTrip.budget}
+              type="number"
+              name="numberOfPeople"
+              value={newTrip.numberOfPeople === 0 ? '' : newTrip.numberOfPeople}
               onChange={handleInputChange}
-              className="w-full px-4 py-2 border border-[#d1c7b7] rounded-lg focus:ring-2 focus:ring-[#f8a95d] focus:border-transparent text-[#5E5854]"
-              placeholder="e.g. $1,200"
+              className="w-full px-4 py-2 border border-[#d1c7b7] rounded-lg focus:ring-1 focus:ring-[#f8a95d] focus:border-[#f8a95d] focus:outline-none hover:border-[#f8a95d] text-[#5E5854]"
+              placeholder="e.g. 2"
+              min="1"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-[#5E5854] font-medium mb-2">Max People<span className="text-red-500">*</span></label>
+            <input
+              type="number"
+              name="maxPeople"
+              value={newTrip.maxPeople === 0 ? '' : newTrip.maxPeople}
+              onChange={handleInputChange}
+              className="w-full px-4 py-2 border border-[#d1c7b7] rounded-lg focus:ring-1 focus:ring-[#f8a95d] focus:border-[#f8a95d] focus:outline-none hover:border-[#f8a95d] text-[#5E5854]"
+              placeholder="e.g. 6"
+              min="1"
               required
             />
           </div>
         </div>
 
-        <div>
-          <label className="block text-[#5E5854] font-medium mb-2">Trip Description</label>
+        <div className="mb-4">
+          <label className="block text-[#5E5854] font-medium mb-2">Gender Preference</label>
+          <div className="flex flex-wrap gap-3">
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="radio"
+                name="genderPreference"
+                value="anyone"
+                checked={newTrip.genderPreference === "anyone"}
+                onChange={handleInputChange}
+                className="sr-only"
+              />
+              <span className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                newTrip.genderPreference === "anyone" 
+                  ? 'bg-[#2c5e4a] text-white' 
+                  : 'bg-[#f8f4e3] text-[#5E5854] hover:bg-[#f0d9b5]'
+              }`}>
+                Anyone
+              </span>
+            </label>
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="radio"
+                name="genderPreference"
+                value="menOnly"
+                checked={newTrip.genderPreference === "menOnly"}
+                onChange={handleInputChange}
+                className="sr-only"
+              />
+              <span className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                newTrip.genderPreference === "menOnly" 
+                  ? 'bg-[#2c5e4a] text-white' 
+                  : 'bg-[#f8f4e3] text-[#5E5854] hover:bg-[#f0d9b5]'
+              }`}>
+                Men Only
+              </span>
+            </label>
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="radio"
+                name="genderPreference"
+                value="womenOnly"
+                checked={newTrip.genderPreference === "womenOnly"}
+                onChange={handleInputChange}
+                className="sr-only"
+              />
+              <span className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                newTrip.genderPreference === "womenOnly" 
+                  ? 'bg-[#2c5e4a] text-white' 
+                  : 'bg-[#f8f4e3] text-[#5E5854] hover:bg-[#f0d9b5]'
+              }`}>
+                Women Only
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-[#5E5854] font-medium mb-2">Trip Category<span className="text-red-500">*</span></label>
+          <select
+            name="category"
+            value={newTrip.category}
+            onChange={handleInputChange}
+            className="w-full px-4 py-2 border border-[#d1c7b7] rounded-lg focus:ring-1 focus:ring-[#f8a95d] focus:border-[#f8a95d] focus:outline-none hover:border-[#f8a95d] text-[#5E5854]"
+            required
+          >
+            <option value="">Select category</option>
+            <option value="Adventure">Adventure</option>
+            <option value="Beach">Beach</option>
+            <option value="City">City</option>
+            <option value="Cultural">Cultural</option>
+            <option value="Mountain">Mountain</option>
+            <option value="Road Trip">Road Trip</option>
+          </select>
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-[#5E5854] font-medium mb-2">Description</label>
           <textarea
             name="description"
             value={newTrip.description}
             onChange={handleInputChange}
-            className="w-full px-4 py-2 border border-[#d1c7b7] rounded-lg focus:ring-2 focus:ring-[#f8a95d] focus:border-transparent text-[#5E5854] h-32"
-            placeholder="Tell potential travel buddies about your trip..."
+            className="w-full px-4 py-2 border border-[#d1c7b7] rounded-lg focus:ring-1 focus:ring-[#f8a95d] focus:border-[#f8a95d] focus:outline-none hover:border-[#f8a95d] text-[#5E5854] min-h-[100px]"
+            placeholder="Describe your trip..."
           ></textarea>
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-[#5E5854] font-medium mb-2">Trip Cover Image</label>
+          <div className="flex items-center space-x-4">
+            <div className="flex-1">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="hidden"
+                id="trip-cover-image"
+              />
+              <label
+                htmlFor="trip-cover-image"
+                className="flex items-center justify-center w-full px-4 py-2 border border-[#d1c7b7] rounded-lg bg-white hover:bg-[#f8f4e3] text-[#5E5854] cursor-pointer transition-colors"
+              >
+                <FiCamera className="mr-2" />
+                {newTrip.coverImage ? 'Change Image' : 'Upload Image'}
+              </label>
+            </div>
+            {newTrip.coverImage && (
+              <div className="w-24 h-24 relative">
+                <img
+                  src={newTrip.coverImage}
+                  alt="Trip cover preview"
+                  className="w-full h-full object-cover rounded-lg border border-[#d1c7b7]"
+                />
+                <button
+                  type="button"
+                  onClick={() => setNewTrip(prev => ({ ...prev, coverImage: null }))}
+                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                >
+                  <FiX className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-[#5E5854] mt-1">Recommended: landscape orientation, at least 800x600px</p>
         </div>
 
         <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4 pt-4">
@@ -1260,8 +1579,7 @@ export default function Dashboard({ onLogout }) {
             Cancel
           </button>
           <button
-            type="button"
-            onClick={handlePostTrip}
+            type="submit"
             className="bg-gradient-to-r from-[#f8a95d] to-[#f87c6d] hover:from-[#f87c6d] hover:to-[#f8a95d] text-white px-6 py-2 rounded-full transition-colors font-cinzel"
           >
             Post Trip
@@ -1373,7 +1691,7 @@ export default function Dashboard({ onLogout }) {
               <h5 className="font-bold mb-4">Explore</h5>
               <ul className="space-y-2 text-[#a8c4b8]">
                 <li><a href="#trips" className="hover:text-[#f8d56b] transition-colors">Available Trips</a></li>
-                <li><a href="#completed" className="hover:text-[#f8d56b] transition-colors">Completed Trips</a></li>
+                <li><a href="#completed" className="hover:text-[#f8d56b] transition-colors">The road so far</a></li>
                 <li><a href="#destinations" className="hover:text-[#f8d56b] transition-colors">Popular Destinations</a></li>
               </ul>
             </div>
@@ -1402,3 +1720,5 @@ export default function Dashboard({ onLogout }) {
     </div>
   );
 }
+
+export default Dashboard;
